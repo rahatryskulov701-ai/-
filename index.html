@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Glitch Space</title>
+<title>GLITCH 3D</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:monospace; touch-action:none; }
-  canvas { display:block; width:100%; height:100%; }
+  canvas { display:block; width:100%; height:100%; image-rendering:pixelated; }
 
-  /* --- виртуальный джойстик --- */
+  /* джойстик движения */
   #joy {
     position:fixed; left:20px; bottom:20px;
     width:130px; height:130px; border-radius:50%;
@@ -24,9 +24,15 @@
     border-radius:50%;
     background:radial-gradient(circle at 30% 30%, #7cffea, #00b39a 60%, #005f52);
     box-shadow:0 0 18px rgba(0,255,200,.8);
-    transition:transform .05s linear;
   }
-  /* --- кнопка рывка --- */
+
+  /* зона обзора (свайп для поворота камеры) */
+  #look {
+    position:fixed; right:0; top:0; width:55%; height:65%;
+    z-index:5;
+  }
+
+  /* кнопка рывка */
   #dash {
     position:fixed; right:24px; bottom:38px;
     width:88px; height:88px; border-radius:50%;
@@ -37,7 +43,7 @@
     box-shadow:0 0 20px rgba(255,60,180,.35);
     z-index:10; user-select:none;
   }
-  #dash:active { transform:scale(.92); box-shadow:0 0 35px rgba(255,60,180,.8); }
+  #dash:active { transform:scale(.92); }
 
   #hud {
     position:fixed; top:12px; left:0; width:100%;
@@ -45,51 +51,100 @@
     letter-spacing:2px; opacity:.75; z-index:10; pointer-events:none;
     text-shadow:0 0 8px #00ffc8;
   }
+  #hint {
+    position:fixed; top:40px; left:0; width:100%; text-align:center;
+    color:#ff7cd8; font-size:10px; letter-spacing:1px; opacity:.5;
+    z-index:10; pointer-events:none;
+  }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hud">GLITCH SPACE</div>
+<div id="hud">GLITCH 3D</div>
+<div id="hint">лево — ходить · право — смотреть</div>
+<div id="look"></div>
 <div id="joy"><div id="stick"></div></div>
 <div id="dash">DASH</div>
 
 <script>
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
-let W, H;
+
+let W, H, RES_W, RES_H;
+const SCALE = 0.5; // рендерим в пол-разрешения для скорости (пиксельный вид)
+
 function resize(){
   W = c.width = window.innerWidth;
   H = c.height = window.innerHeight;
+  RES_W = Math.floor(W * SCALE);
+  RES_H = Math.floor(H * SCALE);
+  buf.width = RES_W;
+  buf.height = RES_H;
 }
-resize();
-window.addEventListener('resize', resize);
+const buf = document.createElement('canvas');
+const bctx = buf.getContext('2d');
 
-/* ================= МИР ================= */
-const world = { w: 4000, h: 4000 };
+/* ================= КАРТА ================= */
+// 1 = стена, 0 = пусто. Крупный лабиринт 24x24
+const MAP = [
+"111111111111111111111111",
+"100000000001000000000001",
+"101111011101011111110001",
+"101000010000010000010001",
+"101011010111010110010101",
+"100010000100010010000101",
+"111011110101110010111101",
+"100010000100000010100001",
+"101110111111011110101111",
+"100000100000010000100001",
+"101111101111010111101101",
+"101000001000010100001001",
+"101011111011110101111001",
+"100010000010000100001001",
+"111010111110111101101101",
+"100010100000100001100001",
+"101110101111101111101111",
+"100000100000100000100001",
+"101111111011111011111101",
+"100000001000001000000001",
+"101111101110101011111101",
+"101000100010101010000001",
+"101010111110101010111101",
+"100010000000001000100001",
+"111111111111111111111111"
+];
+const MAP_W = MAP[0].length;
+const MAP_H = MAP.length;
 
+function isWall(x, y){
+  if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return true;
+  return MAP[y][x] === '1';
+}
+
+/* ================= ИГРОК ================= */
 const player = {
-  x: 2000, y: 2000,
-  vx: 0, vy: 0,
-  r: 14,
-  speed: 0.55,
-  maxSpeed: 5.5,
+  x: 2.5, y: 2.5,
+  dirX: 1, dirY: 0,
+  planeX: 0, planeY: 0.66,
   angle: 0,
   dashCd: 0,
-  trail: []
+  bob: 0
 };
 
 /* ================= ВВОД ================= */
-let input = { x:0, y:0 };
+let move = { x:0, y:0 };
+let lookDelta = 0;
+
+/* --- джойстик --- */
 const joy = document.getElementById('joy');
 const stick = document.getElementById('stick');
-const dashBtn = document.getElementById('dash');
 let joyId = null, joyCenter = {x:0,y:0};
 
 function joyStart(e){
   const t = e.changedTouches ? e.changedTouches[0] : e;
-  const rect = joy.getBoundingClientRect();
-  joyCenter.x = rect.left + rect.width/2;
-  joyCenter.y = rect.top + rect.height/2;
+  const r = joy.getBoundingClientRect();
+  joyCenter.x = r.left + r.width/2;
+  joyCenter.y = r.top + r.height/2;
   joyId = t.identifier !== undefined ? t.identifier : 'mouse';
   joyMove(e);
 }
@@ -105,8 +160,8 @@ function joyMove(e){
   const len = Math.hypot(dx, dy);
   if (len > max){ dx = dx/len*max; dy = dy/len*max; }
   stick.style.transform = `translate(${dx}px, ${dy}px)`;
-  input.x = dx / max;
-  input.y = dy / max;
+  move.x = dx / max;
+  move.y = dy / max;
 }
 function joyEnd(e){
   if (e.changedTouches){
@@ -115,219 +170,224 @@ function joyEnd(e){
     if (!ok) return;
   }
   joyId = null;
-  input.x = 0; input.y = 0;
+  move.x = 0; move.y = 0;
   stick.style.transform = 'translate(0,0)';
 }
-
 joy.addEventListener('touchstart', e => { e.preventDefault(); joyStart(e); }, {passive:false});
 joy.addEventListener('touchmove',  e => { e.preventDefault(); joyMove(e); }, {passive:false});
 joy.addEventListener('touchend',   e => { e.preventDefault(); joyEnd(e); }, {passive:false});
 joy.addEventListener('touchcancel',e => { e.preventDefault(); joyEnd(e); }, {passive:false});
 
-// мышь (для компа)
-joy.addEventListener('mousedown', e => { e.preventDefault(); joyStart(e); });
-window.addEventListener('mousemove', e => { if (joyId === 'mouse') joyMove(e); });
-window.addEventListener('mouseup', e => { if (joyId === 'mouse') joyEnd(e); });
+/* --- зона обзора (свайп) --- */
+const look = document.getElementById('look');
+let lookId = null, lastX = 0;
+look.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  lookId = t.identifier;
+  lastX = t.clientX;
+}, {passive:false});
+look.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches){
+    if (t.identifier === lookId){
+      lookDelta += (t.clientX - lastX) * 0.006;
+      lastX = t.clientX;
+    }
+  }
+}, {passive:false});
+look.addEventListener('touchend', e => {
+  e.preventDefault();
+  lookId = null;
+}, {passive:false});
 
-// клавиатура
+/* --- клавиатура (ПК) --- */
 const keys = {};
 window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 window.addEventListener('keyup',   e => keys[e.key.toLowerCase()] = false);
 
-/* ================= DASH ================= */
+/* --- рывок --- */
 function doDash(){
   if (player.dashCd > 0) return;
   player.dashCd = 1.2;
-  let ax = input.x, ay = input.y;
-  if (Math.hypot(ax, ay) < 0.2){
-    ax = Math.cos(player.angle); ay = Math.sin(player.angle);
-  }
-  const l = Math.hypot(ax, ay) || 1;
-  player.vx += ax/l * 18;
-  player.vy += ay/l * 18;
-  // глитч-вспышка
-  for (let i=0;i<18;i++){
-    particles.push({
-      x: player.x, y: player.y,
-      vx:(Math.random()-.5)*14, vy:(Math.random()-.5)*14,
-      life:1, hue: 300 + Math.random()*80
-    });
-  }
+  const step = 0.9;
+  const nx = player.x + player.dirX * step;
+  const ny = player.y + player.dirY * step;
+  if (!isWall(Math.floor(nx), Math.floor(player.y))) player.x = nx;
+  if (!isWall(Math.floor(player.x), Math.floor(ny))) player.y = ny;
+  glitch = 1;
 }
+const dashBtn = document.getElementById('dash');
 dashBtn.addEventListener('touchstart', e => { e.preventDefault(); doDash(); }, {passive:false});
-dashBtn.addEventListener('mousedown', e => { e.preventDefault(); doDash(); });
-window.addEventListener('keydown', e => { if (e.code === 'Space'){ e.preventDefault(); doDash(); }});
-
-/* ================= ЧАСТИЦЫ ================= */
-const particles = [];
-function spawnAmbient(){
-  if (particles.length > 400) return;
-  particles.push({
-    x: player.x + (Math.random()-.5)*W*0.9,
-    y: player.y + (Math.random()-.5)*H*0.9,
-    vx:(Math.random()-.5)*0.4, vy:(Math.random()-.5)*0.4,
-    life:1, hue: 150 + Math.random()*120, ambient:true, size: Math.random()*2+1
-  });
-}
+window.addEventListener('keydown', e => { if (e.code === 'Space'){ e.preventDefault(); doDash(); } });
 
 /* ================= ОБНОВЛЕНИЕ ================= */
-let camX = player.x, camY = player.y;
-let time = 0;
+let glitch = 0;
+
+function rotate(a){
+  const cs = Math.cos(a), sn = Math.sin(a);
+  const dx = player.dirX, dy = player.dirY;
+  const px = player.planeX, py = player.planeY;
+  player.dirX = dx*cs - dy*sn;
+  player.dirY = dx*sn + dy*cs;
+  player.planeX = px*cs - py*sn;
+  player.planeY = px*sn + py*cs;
+  player.angle += a;
+}
 
 function update(){
-  time += 0.016;
-
   // клавиатура
   let kx = 0, ky = 0;
-  if (keys['w']||keys['ц']||keys['arrowup'])    ky -= 1;
-  if (keys['s']||keys['ы']||keys['arrowdown'])  ky += 1;
-  if (keys['a']||keys['ф']||keys['arrowleft'])  kx -= 1;
-  if (keys['d']||keys['в']||keys['arrowright']) kx += 1;
-  if (kx||ky){ const l=Math.hypot(kx,ky); kx/=l; ky/=l; }
+  if (keys['w']||keys['arrowup'])    ky += 1;
+  if (keys['s']||keys['arrowdown'])  ky -= 1;
+  if (keys['a']||keys['arrowleft'])  kx -= 1;
+  if (keys['d']||keys['arrowright']) kx += 1;
+  if (keys['q']) rotate(-0.05);
+  if (keys['e']) rotate(0.05);
 
-  const ix = input.x + kx;
-  const iy = input.y + ky;
+  // поворот камеры
+  rotate(lookDelta);
+  lookDelta = 0;
 
-  // ускорение
-  player.vx += ix * player.speed;
-  player.vy += iy * player.speed;
+  // движение
+  const speed = 0.06;
+  const mx = -move.y + ky; // стик вверх = вперёд
+  const my = move.x + kx;
 
-  // трение
-  player.vx *= 0.94;
-  player.vy *= 0.94;
-
-  // ограничение скорости
-  const sp = Math.hypot(player.vx, player.vy);
-  if (sp > player.maxSpeed){
-    player.vx = player.vx/sp*player.maxSpeed;
-    player.vy = player.vy/sp*player.maxSpeed;
+  let dx = player.dirX * mx + player.planeX * my;
+  let dy = player.dirY * mx + player.planeY * my;
+  const len = Math.hypot(dx, dy);
+  if (len > 0.001){
+    dx = dx/len * speed;
+    dy = dy/len * speed;
+    const nx = player.x + dx;
+    const ny = player.y + dy;
+    if (!isWall(Math.floor(nx), Math.floor(player.y))) player.x = nx;
+    if (!isWall(Math.floor(player.x), Math.floor(ny))) player.y = ny;
+    player.bob += 0.25;
   }
 
-  player.x += player.vx;
-  player.y += player.vy;
-
-  // границы мира
-  player.x = Math.max(player.r, Math.min(world.w - player.r, player.x));
-  player.y = Math.max(player.r, Math.min(world.h - player.r, player.y));
-
-  // угол
-  if (sp > 0.5) player.angle = Math.atan2(player.vy, player.vx);
-
-  // след
-  if (sp > 1){
-    player.trail.push({x:player.x, y:player.y, life:1});
-  }
-  for (let i=player.trail.length-1;i>=0;i--){
-    player.trail[i].life -= 0.035;
-    if (player.trail[i].life <= 0) player.trail.splice(i,1);
-  }
-  if (player.trail.length > 26) player.trail.shift();
-
-  // кулдаун рывка
   if (player.dashCd > 0) player.dashCd -= 0.016;
+  if (glitch > 0) glitch -= 0.03;
+}
 
-  // камера
-  camX += (player.x - W/2 - camX) * 0.08;
-  camY += (player.y - H/2 - camY) * 0.08;
+/* ================= RAYCASTING ================= */
+function drawScene(){
+  // фон-небо/пол
+  const sky = bctx.createLinearGradient(0,0,0,RES_H/2);
+  sky.addColorStop(0, '#0a0018');
+  sky.addColorStop(1, '#1a0033');
+  bctx.fillStyle = sky;
+  bctx.fillRect(0,0,RES_W,RES_H/2);
 
-  // частицы
-  spawnAmbient();
-  for (let i=particles.length-1;i>=0;i--){
-    const p = particles[i];
-    p.x += p.vx; p.y += p.vy;
-    p.life -= p.ambient ? 0.004 : 0.03;
-    if (p.life <= 0) particles.splice(i,1);
+  const floor = bctx.createLinearGradient(0,RES_H/2,0,RES_H);
+  floor.addColorStop(0, '#0a1a1a');
+  floor.addColorStop(1, '#000');
+  bctx.fillStyle = floor;
+  bctx.fillRect(0,RES_H/2,RES_W,RES_H/2);
+
+  const bobOff = Math.sin(player.bob) * 3;
+
+  for (let x = 0; x < RES_W; x++){
+    const camX = 2 * x / RES_W - 1;
+    const rayX = player.dirX + player.planeX * camX;
+    const rayY = player.dirY + player.planeY * camX;
+
+    let mapX = Math.floor(player.x);
+    let mapY = Math.floor(player.y);
+
+    const deltaX = Math.abs(1 / (rayX || 0.0001));
+    const deltaY = Math.abs(1 / (rayY || 0.0001));
+
+    let stepX, stepY, sideDistX, sideDistY;
+    if (rayX < 0){ stepX = -1; sideDistX = (player.x - mapX) * deltaX; }
+    else { stepX = 1; sideDistX = (mapX + 1 - player.x) * deltaX; }
+    if (rayY < 0){ stepY = -1; sideDistY = (player.y - mapY) * deltaY; }
+    else { stepY = 1; sideDistY = (mapY + 1 - player.y) * deltaY; }
+
+    let hit = false, side = 0;
+    let dist = 0;
+    while (!hit && dist < 40){
+      if (sideDistX < sideDistY){
+        sideDistX += deltaX; mapX += stepX; side = 0;
+      } else {
+        sideDistY += deltaY; mapY += stepY; side = 1;
+      }
+      if (isWall(mapX, mapY)) hit = true;
+      dist++;
+    }
+
+    let perpDist;
+    if (side === 0) perpDist = (mapX - player.x + (1 - stepX)/2) / rayX;
+    else            perpDist = (mapY - player.y + (1 - stepY)/2) / rayY;
+    if (perpDist < 0.01) perpDist = 0.01;
+
+    const lineH = Math.floor(RES_H / perpDist);
+    let drawStart = Math.floor(-lineH/2 + RES_H/2 + bobOff);
+    let drawEnd = Math.floor(lineH/2 + RES_H/2 + bobOff);
+    if (drawStart < 0) drawStart = 0;
+    if (drawEnd > RES_H) drawEnd = RES_H;
+
+    // цвет стены с глитч-эффектом
+    const hue = (mapX * 37 + mapY * 71 + Math.sin(performance.now()*0.001 + mapX) * 30) % 360;
+    let light = side === 0 ? 55 : 38;
+    light = Math.max(8, light - perpDist * 3);
+
+    // глитч-полосы на стенах
+    let g = 0;
+    if (Math.random() < 0.02 + glitch * 0.3) g = (Math.random()-0.5) * 40;
+
+    bctx.fillStyle = `hsl(${(hue + g + 180) % 360}, 90%, ${light}%)`;
+    bctx.fillRect(x, drawStart, 1, drawEnd - drawStart);
+
+    // неоновая кромка
+    bctx.fillStyle = `hsla(${hue}, 100%, 75%, ${0.5 - perpDist*0.02})`;
+    bctx.fillRect(x, drawStart, 1, 2);
+    bctx.fillRect(x, drawEnd - 2, 1, 2);
   }
 }
 
-/* ================= РИСОВАНИЕ ================= */
-function draw(){
-  // фон с эффектом глитча
-  const g = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)*0.8);
-  const hueShift = Math.sin(time*0.5)*20;
-  g.addColorStop(0, `hsl(${260+hueShift}, 60%, 8%)`);
-  g.addColorStop(1, `hsl(${200+hueShift}, 70%, 3%)`);
-  ctx.fillStyle = g;
-  ctx.fillRect(0,0,W,H);
-
-  ctx.save();
-  ctx.translate(-camX, -camY);
-
-  // сетка
-  const grid = 100;
-  const startX = Math.floor(camX/grid)*grid - grid;
-  const startY = Math.floor(camY/grid)*grid - grid;
-  ctx.lineWidth = 1;
-  for (let x = startX; x < camX + W + grid; x += grid){
-    const d = Math.abs((x % 400) - 200)/200;
-    ctx.strokeStyle = `hsla(${170 + Math.sin(time + x*0.01)*40}, 100%, 60%, ${0.06 + d*0.06})`;
-    ctx.beginPath(); ctx.moveTo(x, camY); ctx.lineTo(x, camY + H); ctx.stroke();
-  }
-  for (let y = startY; y < camY + H + grid; y += grid){
-    const d = Math.abs((y % 400) - 200)/200;
-    ctx.strokeStyle = `hsla(${170 + Math.cos(time + y*0.01)*40}, 100%, 60%, ${0.06 + d*0.06})`;
-    ctx.beginPath(); ctx.moveTo(camX, y); ctx.lineTo(camX + W, y); ctx.stroke();
+/* ================= ГЛИТЧ ЭФФЕКТЫ ================= */
+function drawGlitch(){
+  // случайные цветные полосы
+  if (Math.random() < 0.15 + glitch){
+    const y = Math.random() * RES_H;
+    const h = Math.random() * 15 + 2;
+    bctx.globalCompositeOperation = 'screen';
+    bctx.fillStyle = `hsla(${Math.random()*360}, 100%, 60%, ${0.1 + glitch*0.3})`;
+    bctx.fillRect(0, y, RES_W, h);
+    bctx.globalCompositeOperation = 'source-over';
   }
 
-  // частицы
-  for (const p of particles){
-    const a = p.life * (p.ambient ? 0.5 : 1);
-    ctx.fillStyle = `hsla(${p.hue}, 100%, 65%, ${a})`;
-    const s = p.size || 3;
-    ctx.fillRect(p.x - s/2, p.y - s/2, s, s);
+  // RGB-сдвиг при рывке
+  if (glitch > 0.1){
+    const shift = glitch * 20;
+    bctx.globalAlpha = glitch * 0.5;
+    bctx.globalCompositeOperation = 'screen';
+    bctx.drawImage(buf, -shift, 0);
+    bctx.drawImage(buf, shift, 0);
+    bctx.globalAlpha = 1;
+    bctx.globalCompositeOperation = 'source-over';
   }
+}
 
-  // след игрока
-  for (let i=0;i<player.trail.length;i++){
-    const t = player.trail[i];
-    const a = t.life * 0.35;
-    const r = player.r * t.life * 0.9;
-    ctx.fillStyle = `hsla(${160 + i*3}, 100%, 60%, ${a})`;
-    ctx.beginPath(); ctx.arc(t.x, t.y, r, 0, Math.PI*2); ctx.fill();
-  }
+/* ================= ОТРИСОВКА НА ЭКРАН ================= */
+function render(){
+  // масштабируем буфер на весь экран
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(buf, 0, 0, W, H);
 
-  // игрок
-  ctx.save();
-  ctx.translate(player.x, player.y);
-  ctx.rotate(player.angle);
-
-  // свечение
-  const glow = ctx.createRadialGradient(0,0,0, 0,0,player.r*3);
-  glow.addColorStop(0, 'rgba(0,255,200,.8)');
-  glow.addColorStop(1, 'rgba(0,255,200,0)');
-  ctx.fillStyle = glow;
-  ctx.beginPath(); ctx.arc(0,0,player.r*3,0,Math.PI*2); ctx.fill();
-
-  // тело
-  ctx.fillStyle = '#00ffc8';
-  ctx.beginPath(); ctx.arc(0,0,player.r,0,Math.PI*2); ctx.fill();
-
-  // глитч-сдвиг ядра
-  const gx = (Math.random()-.5)*4;
-  ctx.fillStyle = 'rgba(255,0,150,.7)';
-  ctx.beginPath(); ctx.arc(gx,0,player.r*0.55,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle = 'rgba(0,200,255,.7)';
-  ctx.beginPath(); ctx.arc(-gx,0,player.r*0.5,0,Math.PI*2); ctx.fill();
-
-  ctx.restore();
-  ctx.restore();
-
-  // глитч-полосы поверх экрана
-  if (Math.random() < 0.06){
-    const y = Math.random()*H;
-    const h = Math.random()*20 + 4;
-    ctx.fillStyle = `hsla(${Math.random()*360}, 100%, 60%, 0.12)`;
-    ctx.fillRect(0, y, W, h);
-  }
-  if (Math.random() < 0.03){
-    const off = (Math.random()-.5)*20;
-    ctx.globalAlpha = 0.15;
-    ctx.drawImage(c, off, 0);
-    ctx.globalAlpha = 1;
-  }
+  // прицел
+  ctx.strokeStyle = 'rgba(0,255,200,.7)';
+  ctx.lineWidth = 2;
+  const cx = W/2, cy = H/2;
+  ctx.beginPath(); ctx.moveTo(cx-10, cy); ctx.lineTo(cx-3, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+3, cy); ctx.lineTo(cx+10, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy-10); ctx.lineTo(cx, cy-3); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy+3); ctx.lineTo(cx, cy+10); ctx.stroke();
 
   // виньетка
-  const vg = ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.3, W/2,H/2,Math.max(W,H)*0.75);
+  const vg = ctx.createRadialGradient(cx,cy,Math.min(W,H)*0.3, cx,cy,Math.max(W,H)*0.75);
   vg.addColorStop(0,'rgba(0,0,0,0)');
   vg.addColorStop(1,'rgba(0,0,0,0.75)');
   ctx.fillStyle = vg;
@@ -348,12 +408,17 @@ function draw(){
 /* ================= ЦИКЛ ================= */
 function loop(){
   update();
-  draw();
+  drawScene();
+  drawGlitch();
+  render();
   requestAnimationFrame(loop);
 }
+
+window.addEventListener('resize', resize);
+resize();
 loop();
 
-// не даём странице скроллиться/зумиться
+// блокируем скролл/зум
 document.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
 document.addEventListener('gesturestart', e => e.preventDefault());
 </script>
