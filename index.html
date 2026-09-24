@@ -2,8 +2,10 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>GLITCH//VOID 3D</title>
+<meta name="viewport"
+content="width=device-width,initial-scale=1.0,user-scalable=no">
+
+<title>GLITCH//VOID</title>
 
 <style>
 *{
@@ -16,9 +18,9 @@ html,body{
     width:100%;
     height:100%;
     overflow:hidden;
-    background:#020206;
-    font-family:monospace;
+    background:#020207;
     color:white;
+    font-family:monospace;
     touch-action:none;
 }
 
@@ -27,17 +29,116 @@ canvas{
     inset:0;
     width:100%;
     height:100%;
-    image-rendering:auto;
 }
+
+/* ================= MENU ================= */
+
+#menu,
+#win,
+#gameover{
+    position:fixed;
+    inset:0;
+    z-index:100;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:
+        radial-gradient(circle at center,
+        rgba(80,0,120,.35),
+        #020207 65%);
+}
+
+.panel{
+    width:min(90%,380px);
+    padding:30px;
+
+    text-align:center;
+
+    background:rgba(3,3,10,.88);
+
+    border:2px solid white;
+
+    box-shadow:
+        10px 10px #ff0088,
+        -10px -10px #00ffff;
+
+    animation:menuPulse 2s infinite;
+}
+
+@keyframes menuPulse{
+    0%,100%{
+        box-shadow:
+        10px 10px #ff0088,
+        -10px -10px #00ffff;
+    }
+    50%{
+        box-shadow:
+        16px 16px #ff0088,
+        -16px -16px #00ffff;
+    }
+}
+
+.title{
+    font-size:38px;
+    font-weight:bold;
+
+    text-shadow:
+        4px 0 #ff0088,
+        -4px 0 #00ffff;
+
+    animation:titleGlitch .15s infinite alternate;
+}
+
+@keyframes titleGlitch{
+    from{transform:translateX(-1px)}
+    to{transform:translateX(2px)}
+}
+
+.subtitle{
+    margin:10px 0 25px;
+    opacity:.55;
+    font-size:11px;
+}
+
+.menuButton{
+    width:100%;
+    margin:10px 0;
+    padding:17px;
+
+    background:#05050b;
+    color:white;
+
+    border:2px solid white;
+
+    font-family:monospace;
+    font-weight:bold;
+    font-size:17px;
+}
+
+.menuButton:active{
+    transform:scale(.94);
+    background:#ff0088;
+}
+
+#settings{
+    display:none;
+    margin-top:20px;
+    font-size:12px;
+    opacity:.8;
+}
+
+/* ================= HUD ================= */
 
 #hud{
     position:fixed;
     inset:0;
+    z-index:10;
     pointer-events:none;
-    z-index:5;
 }
 
-#top{
+#stats{
     position:absolute;
     top:15px;
     left:15px;
@@ -46,7 +147,7 @@ canvas{
     display:flex;
     justify-content:space-between;
 
-    font-size:15px;
+    font-size:14px;
     font-weight:bold;
 
     text-shadow:
@@ -54,12 +155,26 @@ canvas{
         -2px 0 #00ffff;
 }
 
+#ammo{
+    position:absolute;
+    bottom:135px;
+    right:25px;
+
+    font-size:18px;
+    font-weight:bold;
+
+    text-shadow:0 0 10px #00ffff;
+}
+
 #crosshair{
     position:absolute;
+
     left:50%;
     top:50%;
-    width:22px;
-    height:22px;
+
+    width:28px;
+    height:28px;
+
     transform:translate(-50%,-50%);
 }
 
@@ -68,34 +183,39 @@ canvas{
     content:"";
     position:absolute;
     background:white;
-    box-shadow:0 0 8px #00ffff;
+
+    box-shadow:
+        0 0 8px #00ffff;
 }
 
 #crosshair:before{
-    width:22px;
+    width:28px;
     height:2px;
-    top:10px;
+    top:13px;
 }
 
 #crosshair:after{
     width:2px;
-    height:22px;
-    left:10px;
+    height:28px;
+    left:13px;
 }
+
+/* ================= EFFECTS ================= */
 
 #glitch{
     position:fixed;
     inset:0;
+
+    z-index:20;
     pointer-events:none;
-    z-index:10;
 
     background:
-        repeating-linear-gradient(
-            0deg,
-            transparent 0px,
-            transparent 3px,
-            rgba(255,255,255,.07) 4px
-        );
+    repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 3px,
+        rgba(255,255,255,.045) 4px
+    );
 
     mix-blend-mode:screen;
 }
@@ -103,58 +223,55 @@ canvas{
 #damage{
     position:fixed;
     inset:0;
-    pointer-events:none;
-    z-index:9;
 
     background:#ff003c;
     opacity:0;
+
+    z-index:21;
+    pointer-events:none;
 }
 
-#start{
+#hitmarker{
     position:fixed;
-    z-index:30;
 
     left:50%;
     top:50%;
 
     transform:translate(-50%,-50%);
 
-    width:220px;
-    padding:20px;
-
     color:white;
-    background:#050509;
 
-    border:2px solid white;
+    font-size:30px;
 
-    font-family:monospace;
-    font-size:21px;
-    font-weight:bold;
+    opacity:0;
 
-    box-shadow:
-        8px 8px #ff0088,
-        -8px -8px #00ffff;
+    z-index:22;
+    pointer-events:none;
 }
 
-#start:active{
-    transform:translate(-50%,-50%) scale(.95);
-}
+/* ================= MOBILE CONTROLS ================= */
 
 #joystick{
     position:fixed;
 
-    left:25px;
-    bottom:30px;
+    left:22px;
+    bottom:25px;
 
-    width:145px;
-    height:145px;
+    width:150px;
+    height:150px;
 
-    border:2px solid rgba(0,255,255,.55);
     border-radius:50%;
 
-    background:rgba(0,255,255,.04);
+    border:2px solid rgba(0,255,255,.55);
 
-    z-index:20;
+    background:
+    radial-gradient(
+        circle,
+        rgba(0,255,255,.1),
+        rgba(0,255,255,.02)
+    );
+
+    z-index:40;
 }
 
 #stick{
@@ -170,8 +287,9 @@ canvas{
 
     border-radius:50%;
 
-    background:rgba(0,240,255,.25);
     border:2px solid #00ffff;
+
+    background:rgba(0,255,255,.2);
 
     box-shadow:
         0 0 20px #00ffff;
@@ -179,81 +297,226 @@ canvas{
 
 #look{
     position:fixed;
+
     right:0;
     top:0;
 
-    width:55%;
-    height:100%;
+    width:58%;
+    height:75%;
 
-    z-index:15;
+    z-index:30;
 }
 
-#boost{
+.control{
     position:fixed;
 
-    right:25px;
-    bottom:40px;
-
-    width:80px;
-    height:80px;
+    z-index:50;
 
     border-radius:50%;
-
-    background:#ff008833;
-
-    border:2px solid #ff0088;
-
-    color:white;
 
     font-family:monospace;
     font-weight:bold;
 
-    box-shadow:
-        0 0 20px #ff0088;
+    color:white;
 
-    z-index:25;
+    user-select:none;
 }
 
-#boost:active{
-    transform:scale(.9);
+#fire{
+    right:25px;
+    bottom:35px;
+
+    width:105px;
+    height:105px;
+
+    border:3px solid #ff0088;
+
+    background:
+    radial-gradient(
+        circle,
+        rgba(255,0,136,.45),
+        rgba(255,0,136,.08)
+    );
+
+    box-shadow:
+        0 0 30px #ff0088;
+}
+
+#fire:active{
+    transform:scale(.88);
     background:#ff0088;
 }
 
+#reload{
+    right:145px;
+    bottom:47px;
+
+    width:65px;
+    height:65px;
+
+    border:2px solid #00ffff;
+
+    background:rgba(0,255,255,.1);
+
+    box-shadow:0 0 15px #00ffff;
+}
+
+#boost{
+    right:32px;
+    bottom:155px;
+
+    width:70px;
+    height:70px;
+
+    border:2px solid #ffee00;
+
+    background:rgba(255,238,0,.08);
+
+    box-shadow:0 0 15px #ffee00;
+}
+
+.control:active{
+    transform:scale(.9);
+}
+
+/* ================= INFO ================= */
+
 #info{
     position:absolute;
-    bottom:10px;
+
+    bottom:7px;
     left:50%;
 
     transform:translateX(-50%);
 
-    font-size:10px;
-    opacity:.45;
+    font-size:9px;
+    opacity:.35;
     white-space:nowrap;
+}
+
+.hidden{
+    display:none!important;
+}
+
+@media(max-width:600px){
+    .title{
+        font-size:30px;
+    }
 }
 </style>
 </head>
 
 <body>
 
-<canvas id="canvas"></canvas>
+<canvas id="game"></canvas>
+
+<!-- ================= MENU ================= -->
+
+<div id="menu">
+    <div class="panel">
+
+        <div class="title">
+            GLITCH//VOID
+        </div>
+
+        <div class="subtitle">
+            FIRST PERSON // DIGITAL NIGHTMARE
+        </div>
+
+        <button class="menuButton" id="play">
+            ENTER THE VOID
+        </button>
+
+        <button class="menuButton" id="settingsBtn">
+            SETTINGS
+        </button>
+
+        <div id="settings">
+            TOUCH CONTROL<br><br>
+            LEFT — MOVE<br>
+            RIGHT — LOOK<br>
+            FIRE — SHOOT<br>
+            RELOAD — RELOAD WEAPON<br>
+            BOOST — FAST MOVE
+        </div>
+
+    </div>
+</div>
+
+<!-- ================= WIN ================= -->
+
+<div id="win" class="hidden">
+    <div class="panel">
+
+        <div class="title">
+            VOID CLEARED
+        </div>
+
+        <div class="subtitle">
+            ALL GLITCH ENTITIES DESTROYED
+        </div>
+
+        <button class="menuButton" id="nextRound">
+            NEW ROUND
+        </button>
+
+        <button class="menuButton" id="menuFromWin">
+            MAIN MENU
+        </button>
+
+    </div>
+</div>
+
+<!-- ================= GAME OVER ================= -->
+
+<div id="gameover" class="hidden">
+    <div class="panel">
+
+        <div class="title">
+            SYSTEM FAILURE
+        </div>
+
+        <div class="subtitle">
+            CONNECTION LOST
+        </div>
+
+        <button class="menuButton" id="retry">
+            REBOOT
+        </button>
+
+        <button class="menuButton" id="menuFromDeath">
+            MAIN MENU
+        </button>
+
+    </div>
+</div>
+
+<!-- ================= HUD ================= -->
 
 <div id="hud">
 
-    <div id="top">
+    <div id="stats">
         <div id="score">SCORE 000000</div>
         <div id="hp">HP ███</div>
     </div>
 
     <div id="crosshair"></div>
 
+    <div id="ammo">
+        AMMO 12 / 48
+    </div>
+
     <div id="info">
-        GLITCH//VOID — MOBILE BUILD
+        GLITCH//VOID MOBILE BUILD
     </div>
 
 </div>
 
-<div id="glitch"></div>
+<div id="hitmarker">×</div>
 <div id="damage"></div>
+<div id="glitch"></div>
+
+<!-- ================= CONTROLS ================= -->
 
 <div id="joystick">
     <div id="stick"></div>
@@ -261,42 +524,53 @@ canvas{
 
 <div id="look"></div>
 
-<button id="boost">BOOST</button>
+<button class="control" id="fire">
+    FIRE
+</button>
 
-<button id="start">ENTER//VOID</button>
+<button class="control" id="reload">
+    ↻
+</button>
+
+<button class="control" id="boost">
+    ⚡
+</button>
 
 
 <script>
 
-/* =========================
+/* =====================================================
    CANVAS
-========================= */
+===================================================== */
 
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+const canvas =
+document.getElementById("game");
 
-let W = innerWidth;
-let H = innerHeight;
+const ctx =
+canvas.getContext("2d");
+
+let W,H;
 
 function resize(){
 
-    W = innerWidth;
-    H = innerHeight;
+    W=innerWidth;
+    H=innerHeight;
 
-    canvas.width = W;
-    canvas.height = H;
+    canvas.width=W;
+    canvas.height=H;
 
 }
 
 addEventListener("resize",resize);
+
 resize();
 
 
-/* =========================
-   WORLD
-========================= */
+/* =====================================================
+   MAP
+===================================================== */
 
-const map = [
+const map=[
 
 "111111111111111111111111",
 "100000000000000000000001",
@@ -314,170 +588,265 @@ const map = [
 
 ];
 
-const TILE = 64;
+const TILE=64;
 
 
-/* =========================
+/* =====================================================
    PLAYER
-========================= */
+===================================================== */
 
-let player = {
+let player;
 
-    x:96,
-    y:96,
+function resetPlayer(){
 
-    angle:0,
+    player={
+        x:96,
+        y:96,
 
-    speed:2.6,
+        angle:0,
 
-    hp:3,
+        hp:3,
 
-    score:0
+        speed:2.8,
 
-};
+        score:0,
 
+        ammo:12,
+        reserve:48,
 
-/* =========================
-   RAYCAST SETTINGS
-========================= */
+        shooting:false,
+        reloading:false
+    };
 
-const FOV = Math.PI / 3;
-
-let rays = Math.floor(W / 3);
-
-function castRay(angle){
-
-    let sin = Math.sin(angle);
-    let cos = Math.cos(angle);
-
-    let distance = 0;
-
-    while(distance < 900){
-
-        distance += 2;
-
-        let x = player.x + cos * distance;
-        let y = player.y + sin * distance;
-
-        let mx = Math.floor(x / TILE);
-        let my = Math.floor(y / TILE);
-
-        if(
-            my < 0 ||
-            my >= map.length ||
-            mx < 0 ||
-            mx >= map[0].length
-        ){
-            return distance;
-        }
-
-        if(map[my][mx] === "1"){
-            return distance;
-        }
-
-    }
-
-    return 900;
 }
 
 
-/* =========================
-   GLITCH CITY
-========================= */
+/* =====================================================
+   ENEMIES
+===================================================== */
+
+let enemies=[];
+
+function createEnemies(){
+
+    enemies=[
+        {
+            x:500,
+            y:200,
+            hp:3,
+            maxHp:3,
+            alive:true,
+            glitch:Math.random()*10
+        },
+
+        {
+            x:900,
+            y:350,
+            hp:3,
+            maxHp:3,
+            alive:true,
+            glitch:Math.random()*10
+        },
+
+        {
+            x:1200,
+            y:650,
+            hp:4,
+            maxHp:4,
+            alive:true,
+            glitch:Math.random()*10
+        },
+
+        {
+            x:400,
+            y:650,
+            hp:3,
+            maxHp:3,
+            alive:true,
+            glitch:Math.random()*10
+        },
+
+        {
+            x:1050,
+            y:180,
+            hp:4,
+            maxHp:4,
+            alive:true,
+            glitch:Math.random()*10
+        }
+    ];
+
+}
+
+
+/* =====================================================
+   GAME STATE
+===================================================== */
+
+let running=false;
+let round=1;
+
+
+/* =====================================================
+   RAYCAST
+===================================================== */
+
+const FOV=Math.PI/3;
+
+function castRay(angle){
+
+    const sin=Math.sin(angle);
+    const cos=Math.cos(angle);
+
+    let distance=0;
+
+    while(distance<1000){
+
+        distance+=2;
+
+        const x=
+        player.x+cos*distance;
+
+        const y=
+        player.y+sin*distance;
+
+        const mx=
+        Math.floor(x/TILE);
+
+        const my=
+        Math.floor(y/TILE);
+
+        if(
+            my<0 ||
+            my>=map.length ||
+            mx<0 ||
+            mx>=map[0].length
+        )
+            return distance;
+
+        if(map[my][mx]==="1")
+            return distance;
+    }
+
+    return 1000;
+}
+
+
+/* =====================================================
+   WORLD
+===================================================== */
 
 function drawBackground(){
 
-    let grad = ctx.createLinearGradient(0,0,0,H);
+    const g=
+    ctx.createLinearGradient(
+        0,0,0,H
+    );
 
-    grad.addColorStop(0,"#05000c");
-    grad.addColorStop(.45,"#160b24");
-    grad.addColorStop(1,"#020207");
+    g.addColorStop(0,"#05000d");
+    g.addColorStop(.45,"#170725");
+    g.addColorStop(1,"#010104");
 
-    ctx.fillStyle = grad;
+    ctx.fillStyle=g;
 
     ctx.fillRect(0,0,W,H);
 
 
-    /*
-       НЕОНОВЫЕ ЛИНИИ В НЕБЕ
-    */
+    /* цифровое небо */
 
-    ctx.strokeStyle = "rgba(0,255,255,.12)";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle=
+    "rgba(0,255,255,.12)";
 
-    for(let i=0;i<12;i++){
+    for(let i=0;i<18;i++){
 
-        let yy = H*.25 + i*18;
+        const y=
+        H*.20+i*18;
 
         ctx.beginPath();
 
-        ctx.moveTo(0,yy);
-        ctx.lineTo(W,yy);
+        ctx.moveTo(0,y);
+        ctx.lineTo(W,y);
 
         ctx.stroke();
+    }
 
+
+    /* светящиеся полосы */
+
+    for(let i=0;i<8;i++){
+
+        const x=
+        (i*170-player.x*.15)%W;
+
+        ctx.fillStyle=
+        "rgba(255,0,136,.08)";
+
+        ctx.fillRect(
+            x,
+            H*.28,
+            2,
+            H*.4
+        );
     }
 
 }
 
 
-/* =========================
-   WALL RENDER
-========================= */
+/* =====================================================
+   WALLS
+===================================================== */
 
 function renderWorld(){
 
     drawBackground();
 
-    rays = Math.floor(W / 3);
+    const rays=
+    Math.floor(W/2);
 
-    const strip = W / rays;
+    const strip=
+    W/rays;
 
     for(let i=0;i<rays;i++){
 
-        let cameraX = i / rays - .5;
+        const camera=
+        i/rays-.5;
 
-        let angle =
-            player.angle +
-            cameraX * FOV;
+        const angle=
+        player.angle+
+        camera*FOV;
 
-        let distance = castRay(angle);
+        let distance=
+        castRay(angle);
 
-        /*
-           FISHEYE FIX
-        */
+        distance*=
+        Math.cos(angle-player.angle);
 
-        distance *=
-            Math.cos(angle-player.angle);
+        const wallHeight=
+        Math.min(
+            H*2,
+            TILE*H/distance
+        );
 
-        let wallHeight =
-            (TILE * H) / distance;
+        const top=
+        H/2-wallHeight/2;
 
-        wallHeight =
-            Math.min(H*2,wallHeight);
+        const brightness=
+        Math.max(
+            20,
+            180-distance*.2
+        );
 
-        let top =
-            H/2 - wallHeight/2;
-
-
-        /*
-           Цвет стены
-        */
-
-        let brightness =
-            Math.max(
-                20,
-                170 - distance*.18
-            );
+        const pulse=
+        Math.sin(Date.now()*.004+
+        i*.05)*10;
 
 
-        let r = brightness*.5;
-        let g = brightness*.15;
-        let b = brightness;
-
-
-        ctx.fillStyle =
-            `rgb(${r},${g},${b})`;
+        ctx.fillStyle=
+        `rgb(
+            ${brightness*.45},
+            ${brightness*.10},
+            ${brightness+pulse}
+        )`;
 
         ctx.fillRect(
             i*strip,
@@ -487,14 +856,12 @@ function renderWorld(){
         );
 
 
-        /*
-           НЕОНОВАЯ КРОМКА
-        */
+        /* неоновая кромка */
 
-        if(distance < 300){
+        if(distance<350){
 
-            ctx.fillStyle =
-                "rgba(0,255,255,.18)";
+            ctx.fillStyle=
+            "rgba(0,255,255,.25)";
 
             ctx.fillRect(
                 i*strip,
@@ -502,95 +869,124 @@ function renderWorld(){
                 strip+1,
                 2
             );
-
         }
 
 
-        /*
-           ГЛИТЧ-РАЗРЕЗЫ
-        */
+        /* вертикальные glitch-разрезы */
 
-        if(Math.random()<.035){
+        if(
+            Math.random()<.025
+        ){
 
-            ctx.fillStyle =
-                Math.random()<.5
-                ? "#ff0088"
-                : "#00ffff";
+            ctx.fillStyle=
+            Math.random()<.5
+            ? "#ff0088"
+            : "#00ffff";
 
             ctx.fillRect(
                 i*strip,
-                top + Math.random()*wallHeight,
+                top+
+                Math.random()*wallHeight,
                 strip+2,
-                2+Math.random()*7
+                2+
+                Math.random()*8
             );
-
         }
 
+    }
+
+
+    /* пол */
+
+    ctx.strokeStyle=
+    "rgba(255,0,136,.12)";
+
+    for(let i=0;i<20;i++){
+
+        const y=
+        H/2+
+        Math.pow(i/20,2)*H/2;
+
+        ctx.beginPath();
+
+        ctx.moveTo(0,y);
+        ctx.lineTo(W,y);
+
+        ctx.stroke();
     }
 
 }
 
 
-/* =========================
-   ENEMIES
-========================= */
-
-let enemies = [
-
-    {x:500,y:200,alive:true},
-    {x:900,y:350,alive:true},
-    {x:1200,y:650,alive:true},
-    {x:400,y:650,alive:true}
-
-];
-
+/* =====================================================
+   ENEMY RENDER
+===================================================== */
 
 function renderEnemies(){
 
-    for(const enemy of enemies){
+    const visible=[];
 
-        if(!enemy.alive) continue;
+    for(const e of enemies){
 
-        let dx =
-            enemy.x-player.x;
+        if(!e.alive)
+            continue;
 
-        let dy =
-            enemy.y-player.y;
+        const dx=e.x-player.x;
+        const dy=e.y-player.y;
 
-        let distance =
-            Math.hypot(dx,dy);
+        const distance=
+        Math.hypot(dx,dy);
 
-        let angle =
-            Math.atan2(dy,dx)-player.angle;
+        let angle=
+        Math.atan2(dy,dx)-
+        player.angle;
 
+        while(angle>Math.PI)
+            angle-=Math.PI*2;
 
-        while(angle > Math.PI)
-            angle -= Math.PI*2;
-
-        while(angle < -Math.PI)
-            angle += Math.PI*2;
-
+        while(angle<-Math.PI)
+            angle+=Math.PI*2;
 
         if(
             Math.abs(angle) >
-            FOV/2+.3
-        ) continue;
+            FOV/2+.25
+        )
+            continue;
+
+        visible.push({
+            e,
+            distance,
+            angle
+        });
+
+    }
 
 
-        let size =
-            (TILE*H)/distance;
+    /* дальние сначала */
+
+    visible.sort(
+        (a,b)=>
+        b.distance-a.distance
+    );
 
 
-        let screenX =
-            W/2 +
-            Math.tan(angle) *
-            (W/2) /
-            Math.tan(FOV/2);
+    for(const obj of visible){
 
+        const e=obj.e;
+        const distance=obj.distance;
+        const angle=obj.angle;
 
-        /*
-           ГЛИТЧ-ВРАГ
-        */
+        const size=
+        Math.min(
+            H*1.2,
+            TILE*H/distance
+        );
+
+        const screenX=
+        W/2+
+        Math.tan(angle)*
+        (W/2)/
+        Math.tan(FOV/2);
 
         ctx.save();
 
@@ -599,50 +995,168 @@ function renderEnemies(){
             H/2
         );
 
-        ctx.fillStyle="#ff0088";
 
-        ctx.shadowBlur=25;
+        /* glitch shadow */
+
+        ctx.shadowBlur=30;
         ctx.shadowColor="#ff0088";
 
-        ctx.fillRect(
-            -size*.18,
-            -size*.35,
-            size*.36,
-            size*.7
-        );
 
-        ctx.shadowBlur=0;
+        /* ноги */
 
-        ctx.fillStyle="white";
+        ctx.fillStyle="#16101f";
 
         ctx.fillRect(
-            -size*.12,
-            -size*.12,
-            size*.08,
-            size*.08
+            -size*.13,
+            size*.10,
+            size*.09,
+            size*.38
         );
 
         ctx.fillRect(
             size*.04,
-            -size*.12,
-            size*.08,
-            size*.08
+            size*.10,
+            size*.09,
+            size*.38
         );
 
-        /*
-           RGB СМЕЩЕНИЕ
-        */
 
-        ctx.globalAlpha=.45;
+        /* тело */
+
+        ctx.fillStyle="#21152d";
+
+        ctx.fillRect(
+            -size*.24,
+            -size*.08,
+            size*.48,
+            size*.43
+        );
+
+
+        /* плечи */
+
+        ctx.fillRect(
+            -size*.34,
+            -size*.05,
+            size*.10,
+            size*.30
+        );
+
+        ctx.fillRect(
+            size*.24,
+            -size*.05,
+            size*.10,
+            size*.30
+        );
+
+
+        /* голова */
+
+        ctx.fillStyle="#08080d";
+
+        ctx.fillRect(
+            -size*.17,
+            -size*.40,
+            size*.34,
+            size*.27
+        );
+
+
+        /* лицо полностью пустое */
+
+        ctx.fillStyle="#000";
+
+        ctx.fillRect(
+            -size*.13,
+            -size*.34,
+            size*.26,
+            size*.15
+        );
+
+
+        /* glitch RGB fragments */
+
+        ctx.shadowBlur=0;
+
+        for(let i=0;i<5;i++){
+
+            const yy=
+            -size*.42+
+            Math.random()*size*.85;
+
+            const width=
+            size*(.15+
+            Math.random()*.35);
+
+            ctx.fillStyle=
+            i%2
+            ? "#ff0088"
+            : "#00ffff";
+
+            ctx.globalAlpha=
+            .3+
+            Math.random()*.6;
+
+            ctx.fillRect(
+                -width/2+
+                (Math.random()-.5)*size*.2,
+                yy,
+                width,
+                2+
+                Math.random()*5
+            );
+        }
+
+
+        /* глаза — НЕ лицо, просто glitch */
+
+        ctx.globalAlpha=.8;
+
+        ctx.fillStyle="#ff0088";
+
+        ctx.fillRect(
+            -size*.08,
+            -size*.29,
+            size*.04,
+            size*.025
+        );
 
         ctx.fillStyle="#00ffff";
 
         ctx.fillRect(
-            -size*.18+5,
-            -size*.35,
-            size*.36,
-            size*.7
+            size*.04,
+            -size*.29,
+            size*.04,
+            size*.025
         );
+
+
+        /* HP BAR */
+
+        ctx.globalAlpha=1;
+
+        const barWidth=
+        size*.55;
+
+        ctx.fillStyle="#111";
+
+        ctx.fillRect(
+            -barWidth/2,
+            -size*.52,
+            barWidth,
+            5
+        );
+
+        ctx.fillStyle="#ff0088";
+
+        ctx.fillRect(
+            -barWidth/2,
+            -size*.52,
+            barWidth*
+            (e.hp/e.maxHp),
+            5
+        );
+
 
         ctx.restore();
 
@@ -651,42 +1165,69 @@ function renderEnemies(){
 }
 
 
-/* =========================
+/* =====================================================
    MOVEMENT
-========================= */
+===================================================== */
 
 let joystickX=0;
 let joystickY=0;
 
 let boosting=false;
 
+function isWall(x,y){
+
+    const mx=
+    Math.floor(x/TILE);
+
+    const my=
+    Math.floor(y/TILE);
+
+    if(
+        mx<0 ||
+        my<0 ||
+        my>=map.length ||
+        mx>=map[0].length
+    )
+        return true;
+
+    return map[my][mx]==="1";
+}
+
 
 function move(){
 
-    let speed =
-        player.speed *
-        (boosting ? 2.4 : 1);
+    if(!running)
+        return;
 
+    let speed=
+    player.speed*
+    (boosting?2.1:1);
 
-    let forward = -joystickY;
-    let side = joystickX;
+    const forward=
+    -joystickY;
 
+    const side=
+    joystickX;
 
-    let dx =
-        Math.cos(player.angle)*forward -
-        Math.sin(player.angle)*side;
+    const dx=
+    Math.cos(player.angle)*
+    forward-
+    Math.sin(player.angle)*
+    side;
 
-    let dy =
-        Math.sin(player.angle)*forward +
-        Math.cos(player.angle)*side;
+    const dy=
+    Math.sin(player.angle)*
+    forward+
+    Math.cos(player.angle)*
+    side;
 
+    const nx=
+    player.x+
+    dx*speed;
 
-    let nx =
-        player.x + dx*speed;
-
-    let ny =
-        player.y + dy*speed;
-
+    const ny=
+    player.y+
+    dy*speed;
 
     if(!isWall(nx,player.y))
         player.x=nx;
@@ -697,89 +1238,62 @@ function move(){
 }
 
 
-function isWall(x,y){
-
-    let mx =
-        Math.floor(x/TILE);
-
-    let my =
-        Math.floor(y/TILE);
-
-
-    if(
-        my<0 ||
-        my>=map.length ||
-        mx<0 ||
-        mx>=map[0].length
-    )
-        return true;
-
-
-    return map[my][mx]==="1";
-
-}
-
-
-/* =========================
+/* =====================================================
    ENEMY AI
-========================= */
+===================================================== */
 
 function updateEnemies(){
 
-    for(const enemy of enemies){
+    for(const e of enemies){
 
-        if(!enemy.alive)
+        if(!e.alive)
             continue;
 
+        const dx=
+        player.x-e.x;
 
-        let dx =
-            player.x-enemy.x;
+        const dy=
+        player.y-e.y;
 
-        let dy =
-            player.y-enemy.y;
-
-        let d =
-            Math.hypot(dx,dy);
-
-
-        if(d < 260){
-
-            let speed=.7;
-
-            let nx =
-                enemy.x+
-                dx/d*speed;
-
-            let ny =
-                enemy.y+
-                dy/d*speed;
+        const distance=
+        Math.hypot(dx,dy);
 
 
-            if(!isWall(nx,enemy.y))
-                enemy.x=nx;
+        if(distance<420){
 
-            if(!isWall(enemy.x,ny))
-                enemy.y=ny;
+            const speed=
+            .35+
+            Math.min(
+                .4,
+                160/distance
+            );
+
+            const nx=
+            e.x+
+            dx/distance*speed;
+
+            const ny=
+            e.y+
+            dy/distance*speed;
+
+            if(!isWall(nx,e.y))
+                e.x=nx;
+
+            if(!isWall(e.x,ny))
+                e.y=ny;
 
         }
 
 
-        if(d<30){
+        if(distance<35){
 
-            enemy.alive=false;
+            e.alive=false;
 
             player.hp--;
 
-            player.score =
-                Math.max(
-                    0,
-                    player.score-100
-                );
-
-            hitEffect();
+            damageEffect();
 
             updateHUD();
-
 
             if(player.hp<=0){
 
@@ -794,356 +1308,4 @@ function updateEnemies(){
 }
 
 
-/* =========================
-   EFFECTS
-========================= */
-
-function hitEffect(){
-
-    const d =
-        document.getElementById("damage");
-
-    d.style.opacity=.7;
-
-    setTimeout(()=>{
-        d.style.opacity=0;
-    },100);
-
-}
-
-
-function glitch(){
-
-    if(Math.random()<.04){
-
-        ctx.save();
-
-        let y =
-            Math.random()*H;
-
-        let h =
-            2+Math.random()*15;
-
-        let offset =
-            (Math.random()-.5)*50;
-
-        ctx.drawImage(
-            canvas,
-            0,y,W,h,
-            offset,y,W,h
-        );
-
-        ctx.restore();
-
-    }
-
-}
-
-
-/* =========================
-   HUD
-========================= */
-
-function updateHUD(){
-
-    document.getElementById("score")
-        .textContent =
-        "SCORE "+
-        String(Math.floor(player.score))
-        .padStart(6,"0");
-
-
-    document.getElementById("hp")
-        .textContent =
-        "HP "+
-        "█".repeat(Math.max(0,player.hp))+
-        "░".repeat(3-player.hp);
-
-}
-
-
-/* =========================
-   GAME LOOP
-========================= */
-
-let running=false;
-
-function loop(){
-
-    if(!running)
-        return;
-
-
-    move();
-
-    updateEnemies();
-
-
-    player.score += .08;
-
-
-    renderWorld();
-
-    renderEnemies();
-
-    glitch();
-
-    updateHUD();
-
-
-    requestAnimationFrame(loop);
-
-}
-
-
-/* =========================
-   START
-========================= */
-
-document.getElementById("start")
-.onclick=()=>{
-
-    running=true;
-
-    document.getElementById("start")
-        .style.display="none";
-
-    requestAnimationFrame(loop);
-
-};
-
-
-/* =========================
-   MOBILE JOYSTICK
-========================= */
-
-const joystick =
-    document.getElementById("joystick");
-
-const stick =
-    document.getElementById("stick");
-
-let joyActive=false;
-
-
-function joystickMove(e){
-
-    const rect =
-        joystick.getBoundingClientRect();
-
-    let cx =
-        rect.left+
-        rect.width/2;
-
-    let cy =
-        rect.top+
-        rect.height/2;
-
-
-    let dx =
-        e.clientX-cx;
-
-    let dy =
-        e.clientY-cy;
-
-
-    let max=48;
-
-    let d =
-        Math.hypot(dx,dy);
-
-
-    if(d>max){
-
-        dx =
-            dx/d*max;
-
-        dy =
-            dy/d*max;
-
-    }
-
-
-    stick.style.left =
-        `calc(50% + ${dx}px)`;
-
-    stick.style.top =
-        `calc(50% + ${dy}px)`;
-
-
-    joystickX =
-        dx/max;
-
-    joystickY =
-        dy/max;
-
-}
-
-
-joystick.addEventListener(
-    "pointerdown",
-    e=>{
-
-        joyActive=true;
-
-        joystick.setPointerCapture(
-            e.pointerId
-        );
-
-        joystickMove(e);
-
-    }
-);
-
-
-joystick.addEventListener(
-    "pointermove",
-    e=>{
-
-        if(joyActive)
-            joystickMove(e);
-
-    }
-);
-
-
-joystick.addEventListener(
-    "pointerup",
-    ()=>{
-
-        joyActive=false;
-
-        joystickX=0;
-        joystickY=0;
-
-        stick.style.left="50%";
-        stick.style.top="50%";
-
-    }
-);
-
-
-/* =========================
-   LOOK
-========================= */
-
-const look =
-    document.getElementById("look");
-
-let lookActive=false;
-let lastLookX=0;
-
-
-look.addEventListener(
-    "pointerdown",
-    e=>{
-
-        lookActive=true;
-
-        lastLookX=e.clientX;
-
-        look.setPointerCapture(
-            e.pointerId
-        );
-
-    }
-);
-
-
-look.addEventListener(
-    "pointermove",
-    e=>{
-
-        if(!lookActive)
-            return;
-
-
-        let dx =
-            e.clientX-lastLookX;
-
-
-        player.angle +=
-            dx*.006;
-
-
-        lastLookX=e.clientX;
-
-    }
-);
-
-
-look.addEventListener(
-    "pointerup",
-    ()=>{
-
-        lookActive=false;
-
-    }
-);
-
-
-/* =========================
-   BOOST
-========================= */
-
-const boost =
-    document.getElementById("boost");
-
-
-boost.addEventListener(
-    "pointerdown",
-    ()=>{
-        boosting=true;
-    }
-);
-
-
-boost.addEventListener(
-    "pointerup",
-    ()=>{
-        boosting=false;
-    }
-);
-
-
-boost.addEventListener(
-    "pointercancel",
-    ()=>{
-        boosting=false;
-    }
-);
-
-
-/* =========================
-   GAME OVER
-========================= */
-
-function gameOver(){
-
-    running=false;
-
-    const button =
-        document.getElementById("start");
-
-    button.textContent =
-        "REBOOT//VOID";
-
-    button.style.display="block";
-
-    document.getElementById("score")
-        .textContent =
-        "SYSTEM FAILURE";
-
-}
-
-
-/* =========================
-   INITIAL
-========================= */
-
-updateHUD();
-
-</script>
-
-</body>
-</html>
+/* ==============
